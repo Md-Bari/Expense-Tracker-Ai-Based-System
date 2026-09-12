@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   // Dev origins for local + Cloudflare tunnel development
   allowedDevOrigins: [
     'sharing-processors-without-virtual.trycloudflare.com',
+    'https://expense-tracker-gpdi6oa8n-shitol.vercel.app',
     'farmers-specialties-responding-admit.trycloudflare.com',
     'expense-tracker-kappa-two-22.vercel.app',
     'localhost:3009',
