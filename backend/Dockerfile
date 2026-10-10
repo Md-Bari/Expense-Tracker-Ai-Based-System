@@ -28,5 +28,6 @@ COPY . /app/
 # Expose port (Railway overrides with $PORT env var)
 EXPOSE 8000
 
-# Default start command (railway.json startCommand takes precedence)
-CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120"]
+# Railway's startCommand overrides this; other Docker hosts run migrations and
+# collect static files before starting Gunicorn.
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && exec gunicorn backend.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
