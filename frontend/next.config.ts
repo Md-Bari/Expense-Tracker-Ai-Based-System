@@ -4,8 +4,7 @@ const nextConfig: NextConfig = {
   // Prevent Next.js 308 redirects on trailing slashes so POST payloads aren't lost
   skipTrailingSlashRedirect: true,
   skipProxyUrlNormalize: true,
-  // Standalone output for Docker/Railway — Vercel has its own build system
-  // RAILWAY_ENVIRONMENT is automatically set by Railway, never by Vercel
+  // Standalone output is for Docker/Railway; Vercel uses its native Next.js build.
   output: process.env.RAILWAY_ENVIRONMENT ? 'standalone' : undefined,
   // Dev origins for local + Cloudflare tunnel development
   allowedDevOrigins: [
@@ -21,11 +20,13 @@ const nextConfig: NextConfig = {
   ],
 
   async rewrites() {
-    // On Vercel: set INTERNAL_BACKEND_URL to your Railway/Render backend URL
-    // In Docker dev: defaults to the Docker service name
-    const backendUrl =
-      process.env.INTERNAL_BACKEND_URL ||
-      'http://backend:8007';
+    const configuredBackendUrl = process.env.INTERNAL_BACKEND_URL?.replace(/\/+$/, '');
+    if (process.env.VERCEL && !configuredBackendUrl) {
+      throw new Error(
+        'Set INTERNAL_BACKEND_URL in Vercel to the deployed backend origin, for example https://your-service.onrender.com.'
+      );
+    }
+    const backendUrl = configuredBackendUrl || 'http://backend:8007';
 
     return [
       {
@@ -53,4 +54,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

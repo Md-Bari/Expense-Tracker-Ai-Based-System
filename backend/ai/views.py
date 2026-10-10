@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from django.http import StreamingHttpResponse
+from django.conf import settings
 import requests
-import os
 from .agent import run_financial_agent
 
 
@@ -62,9 +62,14 @@ class AITTSEndpoint(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        api_key = os.environ.get('ELEVENLABS_API_KEY', 'sk_88b38e88708fb1521fd909b54736a1245d41894273a30451')
+        api_key = settings.ELEVENLABS_API_KEY
+        if not api_key:
+            return Response(
+                {'error': 'Text-to-speech is not configured.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
         # Rachel - clear, warm English female voice
-        voice_id = os.environ.get('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
+        voice_id = settings.ELEVENLABS_VOICE_ID
 
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         headers = {

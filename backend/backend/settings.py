@@ -5,19 +5,37 @@ except ImportError:
     dj_database_url = None
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR.parent / '.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev')
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DEBUG is disabled.')
+    SECRET_KEY = 'django-insecure-local-development-key'
 
-# Allow all hosts — edge platforms (Vercel, Railway, Cloudflare) manage SSL and routing
-ALLOWED_HOSTS = ['*']
+_allowed_hosts = [
+    host.strip()
+    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
+_render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if _render_hostname:
+    _allowed_hosts.append(_render_hostname)
+ALLOWED_HOSTS = _allowed_hosts or (['*'] if DEBUG else [])
+if not ALLOWED_HOSTS:
+    raise ImproperlyConfigured(
+        'Set DJANGO_ALLOWED_HOSTS or deploy on Render with RENDER_EXTERNAL_HOSTNAME.'
+    )
 APPEND_SLASH = False
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 INSTALLED_APPS = [
@@ -143,7 +161,7 @@ except ImportError:
     pass
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media_files'
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media_files')))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -171,27 +189,20 @@ SIMPLE_JWT = {
 }
 
 # CORS & CSRF Configuration
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    origin.strip().rstrip('/')
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept', 'accept-encoding', 'authorization', 'content-type',
     'dnt', 'origin', 'user-agent', 'x-csrftoken', 'x-requested-with',
 ]
-
-# Configure CSRF trusted origins dynamically for Vercel, Railway, and local dev
-_env_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else []
-_default_trusted = [
-    'http://localhost:3000',
-    'http://localhost:3009',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3009',
-    'http://10.0.2.2:3009',
-    'http://10.10.33.26:3009',
-    'https://*.vercel.app',
-    'https://*.railway.app',
-    'https://*.trycloudflare.com',
-]
-CSRF_TRUSTED_ORIGINS = list(set([o.strip() for o in _env_origins if o.strip()] + _default_trusted))
+CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)
+if _render_hostname:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_render_hostname}')
 
 
 # Celery Configuration
@@ -222,4 +233,3 @@ try:
     }
 except ImportError:
     CELERY_BEAT_SCHEDULE = {}
-
