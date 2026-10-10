@@ -17,8 +17,11 @@ The `.env` file is ignored by Git; do not commit real credentials.
    `INTERNAL_BACKEND_URL` in Vercel to the Render backend origin (no trailing
    slash or `/api` suffix), then redeploy. See [frontend deployment](../frontend/DEPLOYMENT.md).
 
-The Blueprint provisions a Starter web service, a small managed PostgreSQL
-database, and a persistent disk mounted at `/var/data`. The Starter service and
-database may incur charges. The disk keeps receipt and report uploads across
-deploys; removing it or changing its mount path can make existing uploads
-unavailable. Django migrations and static collection run at service startup.
+The Blueprint currently uses Render's Free web service and Free PostgreSQL
+plans. This avoids selecting paid plans, but Render may suspend free services
+when included usage is exhausted. The web service spins down after inactivity,
+and its local filesystem is ephemeral, so uploaded receipts and reports can be
+lost on restart, spin-down, or redeploy. Free PostgreSQL is limited to 1 GB and
+expires 30 days after creation; export or migrate your data before then.
+Render's included usage limits and terms can change. Django migrations and
+static collection run at service startup.
